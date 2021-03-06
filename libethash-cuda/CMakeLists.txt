@@ -1,3 +1,19 @@
+# A custom command and target to turn the CUDA kernel into a byte array header
+# The normal build depends on it properly and if the kernel file is changed, then
+# a rebuild of libethash-cuda should be triggered
+
+add_custom_command(
+	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/CUDAMiner_kernel.h
+	COMMAND ${CMAKE_COMMAND} ARGS
+	-DTXT2STR_SOURCE_FILE="${CMAKE_CURRENT_SOURCE_DIR}/CUDAMiner_kernel.cu"
+	-DTXT2STR_VARIABLE_NAME=CUDAMiner_kernel
+	-DTXT2STR_HEADER_FILE="${CMAKE_CURRENT_BINARY_DIR}/CUDAMiner_kernel.h"
+	-P "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/txt2str.cmake"
+	COMMENT "Generating CUDA Kernel"
+	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/CUDAMiner_kernel.cu
+)
+add_custom_target(cuda_kernel DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/CUDAMiner_kernel.h ${CMAKE_CURRENT_SOURCE_DIR}/CUDAMiner_kernel.cu)
+
 find_package(CUDA REQUIRED)
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};--ptxas-options=-v;-use_fast_math)
@@ -26,9 +42,14 @@ else()
 endif()
 
 file(GLOB sources "*.cpp" "*.cu")
-file(GLOB headers "*.h" "*.cuh")
+file(GLOB headers "*.h" "*.cuh" "${CMAKE_CURRENT_BINARY_DIR}/CUDAMiner_kernel.h")
 
 cuda_add_library(ethash-cuda STATIC ${sources} ${headers})
-target_link_libraries(ethash-cuda ethcore ethash::ethash Boost::thread)
+add_dependencies(ethash-cuda cuda_kernel)
+# Cmake doesn't handle nvrtc automatically
+find_library(CUDA_nvrtc_LIBRARY NAMES nvrtc PATHS ${CUDA_TOOLKIT_ROOT_DIR} PATH_SUFFIXES lib64 lib/x64 lib64/stubs lib/x64/stubs lib NO_DEFAULT_PATH)
+find_library(CUDA_cuda_LIBRARY NAMES cuda PATHS ${CUDA_TOOLKIT_ROOT_DIR} PATH_SUFFIXES lib64 lib/x64 lib64/stubs lib/x64/stubs lib NO_DEFAULT_PATH)
+target_link_libraries(ethash-cuda ethcore ethash::ethash progpow Boost::thread)
+target_link_libraries(ethash-cuda ${CUDA_nvrtc_LIBRARY} ${CUDA_cuda_LIBRARY})
 target_include_directories(ethash-cuda PUBLIC ${CUDA_INCLUDE_DIRS})
 target_include_directories(ethash-cuda PRIVATE .. ${CMAKE_CURRENT_BINARY_DIR})
