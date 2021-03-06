@@ -7,7 +7,7 @@ branches:
     - appveyor
     - hunter
 clone_depth: 100
-os: "Visual Studio 2017"
+os: "Visual Studio 2019"
 environment:
   matrix:
     - CUDA_VER: "11.2"
@@ -42,8 +42,8 @@ install: |
   nvcc -V
 
 build_script:
-  - call "%ProgramFiles(x86)%\Microsoft Visual Studio\2017\Community\Common7\Tools\VsMSBuildCmd.bat"
-  - set CMAKE_ARGS=-G "Visual Studio 15 2017 Win64" -H. -Bbuild -DETHASHCUDA=ON -DAPICORE=ON -DHUNTER_JOBS_NUMBER=%NUMBER_OF_PROCESSORS%
+  - call "%ProgramFiles(x86)%\Microsoft Visual Studio\2019\Community\Common7\Tools\VsMSBuildCmd.bat"
+  - set CMAKE_ARGS=-G "Visual Studio 16 2019" -H. -Bbuild -DETHASHCUDA=ON -DAPICORE=ON -DHUNTER_JOBS_NUMBER=%NUMBER_OF_PROCESSORS%
   - cmake %CMAKE_ARGS%
   - cmake --build build --config Release --target package
   - ps: |
